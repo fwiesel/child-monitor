@@ -22,6 +22,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.media.AudioManager
+import android.media.audiofx.Visualizer
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
@@ -34,6 +35,8 @@ class ListenActivity : Activity() {
     // Don't attempt to unbind from the service unless the client has received some
     // information about the service's state.
     private var shouldUnbind = false
+    private lateinit var volumeView: VolumeView
+    private var visualizer: Visualizer? = null
     private val connection: ServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             // This is called when the connection with the service has been
@@ -46,9 +49,40 @@ class ListenActivity : Activity() {
                     Toast.LENGTH_SHORT).show()
             val connectedText = findViewById<TextView>(R.id.connectedTo)
             connectedText.text = bs.childDeviceName
-            val volumeView = findViewById<VolumeView>(R.id.volume)
-            volumeView.volumeHistory = bs.volumeHistory
-            bs.onUpdate = { volumeView.postInvalidate() }
+            bs.onAudioSessionId = { audioSessionId ->
+                this@ListenActivity.visualizer = Visualizer(audioSessionId).also {
+                    it.measurementMode = Visualizer.MEASUREMENT_MODE_PEAK_RMS
+                    val minCaptureSize = Visualizer.getCaptureSizeRange()[0]
+                    it.setCaptureSize(minCaptureSize)
+                    val listener = object : Visualizer.OnDataCaptureListener {
+                        override fun onWaveFormDataCapture(
+                            visualizer: Visualizer?,
+                            waveform: ByteArray?,
+                            samplingRate: Int
+                        ) {
+                            visualizer?.let {
+                                val measurement = Visualizer.MeasurementPeakRms()
+                                val ret = visualizer.getMeasurementPeakRms(measurement)
+                                if (Visualizer.SUCCESS == ret) {
+                                    volumeView.postValue(measurement.mRms)
+                                }
+                            }
+                        }
+                        override fun onFftDataCapture(
+                            visualizer: Visualizer?,
+                            fft: ByteArray?,
+                            samplingRate: Int
+                        ) {}
+                    }
+                    val rateInMilliHz = Visualizer.getMaxCaptureRate().
+                        coerceAtMost(20_000) // 20Hz
+                    it.setDataCaptureListener(listener,
+                        rateInMilliHz,
+                        true,
+                        false)
+                    it.enabled = true
+                }
+            }
             bs.onError = { postErrorMessage() }
         }
 
@@ -103,10 +137,10 @@ class ListenActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val bundle = this.intent.extras
-        ensureServiceRunningAndBind(bundle)
-        this.volumeControlStream = AudioManager.STREAM_MUSIC
         setContentView(R.layout.activity_listen)
+        this.volumeView = findViewById<VolumeView>(R.id.volume)
+        ensureServiceRunningAndBind(this.intent.extras)
+        this.volumeControlStream = AudioManager.STREAM_MUSIC
         val statusText = findViewById<TextView>(R.id.textStatus)
         statusText.setText(R.string.listening)
     }

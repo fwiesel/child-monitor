@@ -21,12 +21,13 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
 import kotlin.math.min
 
 class VolumeView : View {
     private val paint: Paint
-    var volumeHistory: VolumeHistory? = null
+    val volumeHistory: VolumeHistory = VolumeHistory(8192)
 
     constructor(context: Context?) : super(context) {
         paint = initPaint()
@@ -46,8 +47,19 @@ class VolumeView : View {
         return paint
     }
 
+    fun postValue(rms : Int) {
+        post {
+            volumeHistory.addLast(rms)
+            invalidate()
+        }.also {
+            if (!it) {
+                Log.w("VolumeView", "Could not post value")
+            }
+        }
+
+    }
     override fun onDraw(canvas: Canvas) {
-        val volumeHistory = this.volumeHistory ?: return
+        val minBrightness = 0.3
         val height = height
         val width = width
         val size = volumeHistory.size() // Size is at most width

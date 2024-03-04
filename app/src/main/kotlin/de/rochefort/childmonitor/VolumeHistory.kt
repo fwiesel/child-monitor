@@ -16,18 +16,22 @@
  */
 package de.rochefort.childmonitor
 
-import android.os.Handler
-import android.os.Looper
+import androidx.annotation.UiThread
 import androidx.collection.CircularArray
 
+@UiThread
 class VolumeHistory internal constructor(private val maxHistory: Int) {
-    private var maxVolume = 0.25
-    var volumeNorm = 1.0 / this.maxVolume
+    // See: https://developer.android.com/reference/android/media/audiofx/Visualizer#MEASUREMENT_MODE_PEAK_RMS
+    // (And: https://en.wikipedia.org/wiki/DBFS)
+    //    0mB means maximum loudness
+    // -600mB means 50% loudness
+    private val minRms = -7500 // -9600
+    private var maxVolume = -6500 - minRms
+    var volumeNorm = 1.0 / maxVolume
         private set
-    private val historyData: CircularArray<Double> = CircularArray(maxHistory)
-    private val uiHandler: Handler = Handler(Looper.getMainLooper())
+    private val historyData: CircularArray<Int> = CircularArray(maxHistory)
 
-    operator fun get(i: Int): Double {
+    operator fun get(i: Int): Int {
         return historyData[i]
     }
 
@@ -35,29 +39,13 @@ class VolumeHistory internal constructor(private val maxHistory: Int) {
         return historyData.size()
     }
 
-    private fun addLast(volume: Double) {
-        // schedule editing of member vars on the ui event loop to avoid concurrency problems
-        uiHandler.post {
-            if (volume > this.maxVolume) {
-                this.maxVolume = volume
-                this.volumeNorm = 1.0 / volume
-            }
-            historyData.addLast(volume)
-            historyData.removeFromStart(historyData.size() - maxHistory)
+    fun addLast(rms: Int) {
+        val volume = rms.coerceIn(minRms, 0) - minRms
+        if (volume > this.maxVolume) {
+            this.maxVolume = volume
+            this.volumeNorm = 1.0 / volume
         }
-    }
-
-    fun onAudioData(data: ShortArray) {
-        if (data.isEmpty()) {
-            return
-        }
-        val scale = 1.0 / 128.0
-        var sum = 0.0
-        for (datum in data) {
-            val rel = datum * scale
-            sum += rel * rel
-        }
-        val volume = sum / data.size
-        addLast(volume)
+        historyData.addLast(volume)
+        historyData.removeFromStart(historyData.size() - maxHistory)
     }
 }

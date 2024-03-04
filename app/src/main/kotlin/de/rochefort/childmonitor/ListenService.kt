@@ -45,7 +45,6 @@ class ListenService : Service() {
     private val binder: IBinder = ListenBinder()
     private lateinit var notificationManager: NotificationManager
     private var listenThread: Thread? = null
-    val volumeHistory = VolumeHistory(16384)
     var childDeviceName: String? = null
         private set
 
@@ -122,7 +121,8 @@ class ListenService : Service() {
     }
 
     var onError: (() -> Unit)? = null
-    var onUpdate: (() -> Unit)? = null
+    var onAudioSessionId: ((Int) -> Unit)? = null
+
     private fun doListen(address: String?, port: Int) {
         val lt = Thread {
             try {
@@ -151,6 +151,7 @@ class ListenService : Service() {
             AudioTrack.MODE_STREAM)
         try {
             audioTrack.play()
+            onAudioSessionId?.invoke(audioTrack.audioSessionId)
         } catch (e : java.lang.IllegalStateException) {
             Log.e(TAG, "Failed to play streamed audio audio for other reason", e)
             return false
@@ -175,10 +176,6 @@ class ListenService : Service() {
                 val decoded: Int = AudioCodecDefines.CODEC.decode(decodedBuffer, readBuffer, len, 0)
                 if (decoded > 0) {
                     audioTrack.write(decodedBuffer, 0, decoded)
-                    val decodedBytes = ShortArray(decoded)
-                    System.arraycopy(decodedBuffer, 0, decodedBytes, 0, decoded)
-                    volumeHistory.onAudioData(decodedBytes)
-                    onUpdate?.invoke()
                 }
             }
             return true
