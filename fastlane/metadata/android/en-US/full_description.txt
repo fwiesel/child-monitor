@@ -3,4 +3,5 @@
 <p>The project is a fork of Protect Baby Monitor which is declared as "on hiatus" by its developer.</p>
 <p>Child Monitor works on Android 5.0 (Lollipop) and newer, i.e. Android SDK 21.</p>
 <p>Warning: This version of Child Monitor is incompatible with versions older than 1.0!</p>
-<p>New in this release: Child Monitor can continue to run in the background!</p>
+<p>Bugfix in this release: The parent device detects when the child device no longer sends data (e.g.
+because of network problems), disconnects and plays the notfication sound.</p>
