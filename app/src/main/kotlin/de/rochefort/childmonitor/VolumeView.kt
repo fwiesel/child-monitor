@@ -52,10 +52,11 @@ class VolumeView : View {
         val width = width
         val size = volumeHistory.size() // Size is at most width
         val volumeNorm = volumeHistory.volumeNorm
+        val minBrightness = 0.3
         val relativeBrightness: Double = if (size > 0) {
-            volumeHistory[size - 1].coerceAtLeast(0.3)
+            (volumeNorm * volumeHistory[size - 1]).coerceAtLeast(minBrightness)
         } else {
-            0.3
+            minBrightness
         }
         val blue: Int
         val rest: Int
