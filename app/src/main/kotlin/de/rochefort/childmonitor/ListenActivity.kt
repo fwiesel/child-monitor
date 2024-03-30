@@ -48,8 +48,8 @@ class ListenActivity : Activity() {
             connectedText.text = bs.childDeviceName
             val volumeView = findViewById<VolumeView>(R.id.volume)
             volumeView.volumeHistory = bs.volumeHistory
-            bs.setUpdateCallback { volumeView.postInvalidate() }
-            bs.setErrorCallback { postErrorMessage() }
+            bs.onUpdate = { volumeView.postInvalidate() }
+            bs.onError = { postErrorMessage() }
         }
 
         override fun onServiceDisconnected(className: ComponentName) {

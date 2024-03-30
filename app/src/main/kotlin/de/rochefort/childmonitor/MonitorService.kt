@@ -48,10 +48,7 @@ class MonitorService : Service() {
     private var currentPort = 0
     private lateinit var notificationManager: NotificationManager
     private var monitorThread: Thread? = null
-    private var monitorActivity: MonitorActivity? = null
-    fun setMonitorActivity(monitorActivity: MonitorActivity?) {
-        this.monitorActivity = monitorActivity
-    }
+    var monitorActivity: MonitorActivity? = null
 
     private fun serviceConnection(socket: Socket) {
         val ma = this.monitorActivity

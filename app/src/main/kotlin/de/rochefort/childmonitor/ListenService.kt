@@ -116,21 +116,13 @@ class ListenService : Service() {
         }
     }
 
-    fun setErrorCallback(errorCallback: (() -> Unit)) {
-        this.errorCallback = errorCallback
-    }
-
-    fun setUpdateCallback(updateCallback: (() -> Unit)) {
-        this.updateCallback = updateCallback
-    }
-
     inner class ListenBinder : Binder() {
         val service: ListenService
             get() = this@ListenService
     }
 
-    private var errorCallback: (() -> Unit)? = null
-    private var updateCallback: (() -> Unit)? = null
+    var onError: (() -> Unit)? = null
+    var onUpdate: (() -> Unit)? = null
     private fun doListen(address: String?, port: Int) {
         val lt = Thread {
             try {
@@ -139,7 +131,7 @@ class ListenService : Service() {
                 val success = streamAudio(socket)
                 if (!success) {
                     playAlert()
-                    errorCallback?.invoke()
+                    onError?.invoke()
                 }
             } catch (e : IOException) {
                 Log.e(TAG, "Error opening socket to $address on port $port", e)
@@ -186,7 +178,7 @@ class ListenService : Service() {
                     val decodedBytes = ShortArray(decoded)
                     System.arraycopy(decodedBuffer, 0, decodedBytes, 0, decoded)
                     volumeHistory.onAudioData(decodedBytes)
-                    updateCallback?.invoke()
+                    onUpdate?.invoke()
                 }
             }
             return true
