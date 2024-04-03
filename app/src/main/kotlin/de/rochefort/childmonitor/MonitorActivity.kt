@@ -39,7 +39,7 @@ class MonitorActivity : Activity() {
             // service that we know is running in our own process, we can
             // cast its IBinder to a concrete class and directly access it.
             val bs = (service as MonitorBinder).service
-            bs.setMonitorActivity(this@MonitorActivity)
+            bs.monitorActivity = this@MonitorActivity
         }
 
         override fun onServiceDisconnected(className: ComponentName) {
