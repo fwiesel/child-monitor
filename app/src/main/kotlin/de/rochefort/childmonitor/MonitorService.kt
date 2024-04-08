@@ -16,6 +16,7 @@
  */
 package de.rochefort.childmonitor
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -38,6 +39,8 @@ import androidx.core.app.ServiceCompat
 import java.io.IOException
 import java.net.ServerSocket
 import java.net.Socket
+import java.net.SocketOptions
+import java.net.StandardSocketOptions
 
 class MonitorService : Service() {
     private val binder: IBinder = MonitorBinder()
@@ -72,18 +75,24 @@ class MonitorService : Service() {
             // This should never happen, we asked for permission before
             throw RuntimeException(e)
         }
-        val pcmBufferSize = bufferSize * 2
-        val pcmBuffer = ShortArray(pcmBufferSize)
-        val ulawBuffer = ByteArray(pcmBufferSize)
+        val samplesPerRead = AudioCodecDefines.SAMPLES_PER_READ
+        val pcmBuffer = ShortArray(samplesPerRead)
+        val ulawBuffer = ByteArray(samplesPerRead)
         try {
             audioRecord.startRecording()
             val out = socket.getOutputStream()
-            socket.sendBufferSize = pcmBufferSize
-            Log.d(TAG, "Socket send buffer size: " + socket.sendBufferSize)
+            socket.apply {
+                tcpNoDelay = true // Do not wait for ~1500bytes to accumulated
+                sendBufferSize = AudioCodecDefines.BUFFER_SIZE
+                trafficClass = 0x10 // IPTOS_LOWDELAY Likely ignored, but at least we did our part
+            }
+            Log.d(TAG, "Socket send buffer size: ${socket.sendBufferSize} (${AudioCodecDefines.BUFFER_SIZE})")
+            Log.d(TAG, "Socket tcpNoDelay: ${socket.tcpNoDelay} (${true})")
             while (socket.isConnected && (this.currentSocket != null) && !Thread.currentThread().isInterrupted) {
-                val read = audioRecord.read(pcmBuffer, 0, bufferSize)
+                val read = audioRecord.read(pcmBuffer, 0, samplesPerRead)
                 val encoded: Int = AudioCodecDefines.CODEC.encode(pcmBuffer, read, ulawBuffer, 0)
                 out.write(ulawBuffer, 0, encoded)
+                out.flush()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Connection failed", e)
@@ -112,6 +121,7 @@ class MonitorService : Service() {
         return START_REDELIVER_INTENT
     }
 
+    @SuppressLint("NewApi")
     private fun ensureMonitorThread() {
         var mt = this.monitorThread
         if (mt != null && mt.isAlive) {
@@ -123,6 +133,7 @@ class MonitorService : Service() {
             while (this.connectionToken == currentToken) {
                 try {
                     ServerSocket(this.currentPort).use { serverSocket ->
+                        serverSocket.setOption(StandardSocketOptions.TCP_NODELAY, true)
                         this.currentSocket = serverSocket
                         // Store the chosen port.
                         val localPort = serverSocket.localPort
