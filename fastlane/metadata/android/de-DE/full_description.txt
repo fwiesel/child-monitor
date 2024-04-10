@@ -3,5 +3,4 @@
 <p>Dieses Projekt ist ein Fork von Protect Baby Monitor, welches von seinem Entwickler als "on hiatus" (pausiert) gekennzeichnet wurde.</p>
 <p>Child Monitor funktioniert auf Android 5.0 (Lollipop) und neuer, d.h. ab Android SDK 21.</p>
 <p>Achtung: Diese Version von Child Monitor ist inkompatibel zu älteren Versionen als 1.0!</p>
-<p>Fehlerbehebung in dieser Version: Das Elterngerät erkennt jetzt, wenn das Kindgerät keine Daten mehr schickt
-(z.B. aufgrund von Netzwerkproblemen), trennt die Verbindung und spielt den Warnton ab.</p>
+<p>Fehlerbehebung in dieser Version: Falsche Berechnung des Hintergrundfarbe des Lautstärkemonitors.</p>
