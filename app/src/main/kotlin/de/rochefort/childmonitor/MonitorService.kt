@@ -78,8 +78,6 @@ class MonitorService : Service() {
         try {
             audioRecord.startRecording()
             val out = socket.getOutputStream()
-            socket.sendBufferSize = pcmBufferSize
-            Log.d(TAG, "Socket send buffer size: " + socket.sendBufferSize)
             while (socket.isConnected && (this.currentSocket != null) && !Thread.currentThread().isInterrupted) {
                 val read = audioRecord.read(pcmBuffer, 0, bufferSize)
                 val encoded: Int = AudioCodecDefines.CODEC.encode(pcmBuffer, read, ulawBuffer, 0)
